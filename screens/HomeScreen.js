@@ -1,30 +1,29 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions } from 'react-native';
-import { MotiView, MotiText } from '@moti/core';
-import { useAnimationState } from '@moti/interactions';
+import { MotiView, MotiText } from 'moti';
+import Animated, { useSharedValue, withTiming, useAnimatedStyle } from 'react-native-reanimated';
 
 const { width, height } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
-  const animationState = useAnimationState({
-    from: { opacity: 0, scale: 0.8 },
-    to: { opacity: 1, scale: 1 },
-  });
+  // 🔹 Estados de animação substituindo o antigo useAnimationState
+  const scale = useSharedValue(0.8);
+  const opacity = useSharedValue(0);
 
-  React.useEffect(() => {
-    animationState.transitionTo('to');
+  useEffect(() => {
+    scale.value = withTiming(1, { duration: 800 });
+    opacity.value = withTiming(1, { duration: 800 });
   }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
 
   return (
     <ScrollView style={styles.container}>
       {/* Banner Principal */}
-      <MotiView
-        state={animationState}
-        style={styles.banner}
-        from={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ type: 'timing', duration: 1000 }}
-      >
+      <Animated.View style={[styles.banner, animatedStyle]}>
         <Image source={{ uri: 'https://via.placeholder.com/800x400?text=Banner+Grafica' }} style={styles.bannerImage} />
         <MotiText
           style={styles.bannerText}
@@ -42,7 +41,7 @@ const HomeScreen = ({ navigation }) => {
             <Text style={styles.buttonTextSecondary}>Fazer Orçamento</Text>
           </TouchableOpacity>
         </View>
-      </MotiView>
+      </Animated.View>
 
       {/* Produtos em Destaque */}
       <MotiView
