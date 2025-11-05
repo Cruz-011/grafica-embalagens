@@ -1,56 +1,90 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
-import { MotiView, MotiText } from 'moti';
+import React from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Alert,
+  SafeAreaView,
+  StatusBar,
+} from "react-native";
+import { MotiView, MotiText } from "moti";
+import { useCart } from "../context/CartContext";
+
+const Header = ({ navigation }) => (
+  <View style={styles.header}>
+    <Text style={styles.headerTitle}>Carrinho</Text>
+    <TouchableOpacity onPress={() => navigation.navigate("Products")}>
+      <Text style={styles.headerLink}>+ Produtos</Text>
+    </TouchableOpacity>
+  </View>
+);
+
+const Footer = ({ onCheckout, total }) => (
+  <View style={styles.footer}>
+    <View style={styles.summaryRow}>
+      <Text style={styles.summaryLabel}>Total</Text>
+      <Text style={styles.summaryValue}>R$ {total.toFixed(2)}</Text>
+    </View>
+    <TouchableOpacity style={styles.checkoutButton} onPress={onCheckout}>
+      <MotiText
+        from={{ scale: 1 }}
+        animate={{ scale: 1.02 }}
+        transition={{ type: "timing", duration: 180 }}
+        style={styles.checkoutButtonText}
+      >
+        Finalizar Compra
+      </MotiText>
+    </TouchableOpacity>
+  </View>
+);
 
 const CartScreen = ({ navigation }) => {
-  const [cartItems, setCartItems] = useState([
-    { id: 1, name: 'Caixa Personalizada', price: 15.99, quantity: 2 },
-    { id: 2, name: 'Sacola Ecológica', price: 8.99, quantity: 1 },
-  ]);
+  const { cartItems, updateQuantity, removeItem, clearCart } = useCart();
 
-  const updateQuantity = (id, newQuantity) => {
-    if (newQuantity <= 0) {
-      removeItem(id);
-      return;
-    }
-    setCartItems(cartItems.map(item =>
-      item.id === id ? { ...item, quantity: newQuantity } : item
-    ));
+  const total = cartItems.reduce(
+    (s, i) => s + i.price * i.quantity,
+    0
+  );
+  const shipping = total > 200 ? 0 : 10.0;
+
+  const onCheckout = () => {
+    Alert.alert("Compra finalizada!", `Total: R$ ${(total + shipping).toFixed(2)}`);
+    clearCart();
+    navigation.navigate("Home");
   };
-
-  const removeItem = (id) => {
-    setCartItems(cartItems.filter(item => item.id !== id));
-  };
-
-  const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = 10.00; // Example shipping cost
 
   const renderItem = ({ item }) => (
     <MotiView
       style={styles.cartItem}
-      from={{ opacity: 0, translateX: -50 }}
+      from={{ opacity: 0, translateX: -20 }}
       animate={{ opacity: 1, translateX: 0 }}
-      transition={{ type: 'timing', duration: 500 }}
+      transition={{ type: "timing", duration: 350 }}
     >
       <View style={styles.itemDetails}>
         <Text style={styles.itemName}>{item.name}</Text>
         <Text style={styles.itemPrice}>R$ {item.price.toFixed(2)}</Text>
       </View>
+
       <View style={styles.quantityControls}>
         <TouchableOpacity
-          style={styles.quantityButton}
           onPress={() => updateQuantity(item.id, item.quantity - 1)}
+          style={styles.quantityButton}
         >
           <Text style={styles.quantityButtonText}>-</Text>
         </TouchableOpacity>
+
         <Text style={styles.quantityText}>{item.quantity}</Text>
+
         <TouchableOpacity
-          style={styles.quantityButton}
           onPress={() => updateQuantity(item.id, item.quantity + 1)}
+          style={styles.quantityButton}
         >
           <Text style={styles.quantityButtonText}>+</Text>
         </TouchableOpacity>
       </View>
+
       <TouchableOpacity
         style={styles.removeButton}
         onPress={() => removeItem(item.id)}
@@ -61,138 +95,92 @@ const CartScreen = ({ navigation }) => {
   );
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={cartItems}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id.toString()}
-        ListEmptyComponent={<Text style={styles.emptyCart}>Carrinho vazio</Text>}
-      />
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      <Header navigation={navigation} />
 
-      <MotiView
-        style={styles.summary}
-        from={{ opacity: 0, translateY: 50 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 500, delay: 300 }}
-      >
-        <Text style={styles.summaryText}>Subtotal: R$ {total.toFixed(2)}</Text>
-        <Text style={styles.summaryText}>Frete: R$ {shipping.toFixed(2)}</Text>
-        <Text style={styles.totalText}>Total: R$ {(total + shipping).toFixed(2)}</Text>
-
-        <TouchableOpacity
-          style={styles.checkoutButton}
-          onPress={() => Alert.alert('Compra finalizada!', 'Obrigado pela compra.')}
-        >
-          <MotiText
-            style={styles.checkoutButtonText}
-            from={{ scale: 1 }}
-            animate={{ scale: 1.05 }}
-            transition={{ type: 'timing', duration: 200 }}
+      {cartItems.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Seu carrinho está vazio.</Text>
+          <TouchableOpacity
+            style={styles.goToStoreButton}
+            onPress={() => navigation.navigate("Products")}
           >
-            Finalizar Compra
-          </MotiText>
-        </TouchableOpacity>
-      </MotiView>
-    </View>
+            <Text style={styles.goToStoreText}>Continuar comprando</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          <FlatList
+            data={cartItems}
+            renderItem={renderItem}
+            keyExtractor={(i) => i.id.toString()}
+            contentContainerStyle={{ padding: 16 }}
+          />
+          <Footer onCheckout={onCheckout} total={total + shipping} />
+        </>
+      )}
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
+  container: { flex: 1, backgroundColor: "#FAFAFB" },
+  header: {
+    padding: 16,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
+  headerTitle: { fontSize: 18, fontWeight: "700", color: "#003366" },
+  headerLink: { color: "#FF9800", fontWeight: "700" },
   cartItem: {
-    backgroundColor: '#E0E0E0',
-    padding: 15,
-    margin: 10,
+    backgroundColor: "#fff",
     borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    padding: 12,
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    elevation: 1,
   },
-  itemDetails: {
-    flex: 1,
-  },
-  itemName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#212121',
-    fontFamily: 'Roboto',
-  },
-  itemPrice: {
-    fontSize: 14,
-    color: '#4CAF50',
-    fontFamily: 'Open Sans',
-  },
+  itemDetails: { flex: 1 },
+  itemName: { fontSize: 16, fontWeight: "700", color: "#222" },
+  itemPrice: { color: "#4CAF50", marginTop: 6 },
   quantityControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 8,
   },
   quantityButton: {
-    backgroundColor: '#003366',
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#003366",
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  quantityButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  quantityText: {
-    marginHorizontal: 10,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  quantityButtonText: { color: "#fff", fontWeight: "700" },
+  quantityText: { marginHorizontal: 8, fontWeight: "700" },
   removeButton: {
-    backgroundColor: '#FF9800',
-    padding: 8,
-    borderRadius: 5,
+    backgroundColor: "#FF3B30",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
-  removeButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  emptyCart: {
-    textAlign: 'center',
-    fontSize: 18,
-    color: '#757575',
-    marginTop: 50,
-  },
-  summary: {
-    backgroundColor: '#E0E0E0',
-    padding: 20,
-    margin: 10,
-    borderRadius: 10,
-  },
-  summaryText: {
-    fontSize: 16,
-    color: '#212121',
-    marginBottom: 5,
-    fontFamily: 'Open Sans',
-  },
-  totalText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#003366',
-    marginBottom: 15,
-    fontFamily: 'Roboto',
-  },
-  checkoutButton: {
-    backgroundColor: '#4CAF50',
-    padding: 15,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  checkoutButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  removeButtonText: { color: "#fff", fontWeight: "700" },
+  footer: { padding: 16, backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: "#eee" },
+  summaryRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12 },
+  summaryLabel: { fontSize: 16, color: "#666" },
+  summaryValue: { fontSize: 18, fontWeight: "700", color: "#003366" },
+  checkoutButton: { backgroundColor: "#4CAF50", paddingVertical: 12, borderRadius: 10, alignItems: "center" },
+  checkoutButtonText: { color: "#fff", fontWeight: "700" },
+  emptyContainer: { flex: 1, alignItems: "center", justifyContent: "center", padding: 20 },
+  emptyText: { fontSize: 18, color: "#666", marginBottom: 12 },
+  goToStoreButton: { backgroundColor: "#003366", paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8 },
+  goToStoreText: { color: "#fff", fontWeight: "700" },
 });
 
 export default CartScreen;

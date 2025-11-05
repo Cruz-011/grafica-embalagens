@@ -1,6 +1,40 @@
+// AdminPanelScreen.js
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  SafeAreaView,
+  StatusBar,
+  Dimensions,
+} from 'react-native';
 import { MotiView, MotiText } from 'moti';
+
+const { width } = Dimensions.get('window');
+
+const Header = ({ navigation }) => (
+  <View style={styles.header}>
+    <Text style={styles.headerTitle}>FWV Frost — Painel</Text>
+    <View style={styles.headerActions}>
+      <TouchableOpacity onPress={() => navigation?.navigate?.('Home')}>
+        <Text style={styles.headerLink}>Home</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => navigation?.navigate?.('Products')}>
+        <Text style={styles.headerLink}>Produtos</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+);
+
+const Footer = () => (
+  <View style={styles.footer}>
+    <Text style={styles.footerText}>© {new Date().getFullYear()} FWV Frost</Text>
+  </View>
+);
 
 const AdminPanelScreen = ({ navigation }) => {
   const [products, setProducts] = useState([
@@ -15,274 +49,207 @@ const AdminPanelScreen = ({ navigation }) => {
   const [showAddForm, setShowAddForm] = useState(false);
 
   const addProduct = () => {
-    if (newProduct.name && newProduct.price && newProduct.stock) {
-      setProducts([...products, { ...newProduct, id: products.length + 1, status: 'ativo' }]);
-      setNewProduct({ name: '', price: '', stock: '' });
-      setShowAddForm(false);
-      Alert.alert('Sucesso', 'Produto adicionado!');
-    } else {
-      Alert.alert('Erro', 'Preencha todos os campos.');
+    const priceNum = parseFloat(newProduct.price);
+    const stockNum = parseInt(newProduct.stock, 10);
+
+    if (!newProduct.name || Number.isNaN(priceNum) || Number.isNaN(stockNum)) {
+      Alert.alert('Erro', 'Preencha todos os campos corretamente.');
+      return;
     }
+
+    setProducts(prev => [
+      ...prev,
+      { id: prev.length + 1, name: newProduct.name, price: priceNum, stock: stockNum, status: 'ativo' },
+    ]);
+    setNewProduct({ name: '', price: '', stock: '' });
+    setShowAddForm(false);
+    Alert.alert('Sucesso', 'Produto adicionado!');
   };
 
   const removeProduct = (id) => {
-    setProducts(products.filter(p => p.id !== id));
+    Alert.alert('Confirmar', 'Deseja remover esse produto?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Remover', style: 'destructive', onPress: () => setProducts(p => p.filter(x => x.id !== id)) },
+    ]);
   };
 
   const renderProduct = ({ item }) => (
     <MotiView
       style={styles.productItem}
-      from={{ opacity: 0, translateX: -50 }}
+      from={{ opacity: 0, translateX: -20 }}
       animate={{ opacity: 1, translateX: 0 }}
-      transition={{ type: 'timing', duration: 500 }}
+      transition={{ type: 'timing', duration: 400 }}
     >
       <View style={styles.productDetails}>
         <Text style={styles.productName}>{item.name}</Text>
-        <Text style={styles.productInfo}>Preço: R$ {item.price} | Estoque: {item.stock}</Text>
-        <Text style={[styles.status, { color: item.status === 'ativo' ? '#4CAF50' : '#FF0000' }]}>{item.status}</Text>
+        <Text style={styles.productInfo}>Preço: R$ {item.price.toFixed(2)}  •  Estoque: {item.stock}</Text>
+        <Text style={[styles.status, { color: item.status === 'ativo' ? '#4CAF50' : '#FF3B30' }]}>{item.status.toUpperCase()}</Text>
       </View>
-      <TouchableOpacity
-        style={styles.removeButton}
-        onPress={() => removeProduct(item.id)}
-      >
-        <Text style={styles.removeButtonText}>Remover</Text>
-      </TouchableOpacity>
+      <View style={styles.productActions}>
+        <TouchableOpacity style={styles.editButton} onPress={() => Alert.alert('Editar', 'Funcionalidade de editar ancora não implementada')}>
+          <Text style={styles.editButtonText}>Editar</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.removeButton} onPress={() => removeProduct(item.id)}>
+          <Text style={styles.removeButtonText}>Remover</Text>
+        </TouchableOpacity>
+      </View>
     </MotiView>
   );
 
   const renderOrder = ({ item }) => (
     <MotiView
       style={styles.orderItem}
-      from={{ opacity: 0, translateX: 50 }}
+      from={{ opacity: 0, translateX: 20 }}
       animate={{ opacity: 1, translateX: 0 }}
-      transition={{ type: 'timing', duration: 500 }}
+      transition={{ type: 'timing', duration: 400 }}
     >
-      <View style={styles.orderDetails}>
+      <View style={{ flex: 1 }}>
         <Text style={styles.orderCustomer}>{item.customer}</Text>
         <Text style={styles.orderInfo}>Total: R$ {item.total.toFixed(2)}</Text>
-        <Text style={[styles.orderStatus, { color: item.status === 'pendente' ? '#FF9800' : item.status === 'em produção' ? '#003366' : '#4CAF50' }]}>
-          {item.status}
-        </Text>
       </View>
+      <Text style={[styles.orderStatus, { color: item.status === 'pendente' ? '#FF9800' : item.status === 'em produção' ? '#003366' : '#4CAF50' }]}>
+        {item.status}
+      </Text>
     </MotiView>
   );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Painel de Administração</Text>
-
-      {/* Métricas */}
-      <MotiView
-        style={styles.metrics}
-        from={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: 'timing', duration: 500 }}
-      >
-        <Text style={styles.metric}>Vendas Hoje: R$ 150.00</Text>
-        <Text style={styles.metric}>Produtos Mais Vendidos: Caixas</Text>
-        <Text style={styles.metric}>Pedidos Pendentes: 5</Text>
-      </MotiView>
-
-      {/* Gerenciamento de Produtos */}
-      <Text style={styles.sectionTitle}>Gerenciamento de Produtos</Text>
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => setShowAddForm(!showAddForm)}
-      >
-        <Text style={styles.addButtonText}>Adicionar Produto</Text>
-      </TouchableOpacity>
-
-      {showAddForm && (
-        <MotiView
-          style={styles.addForm}
-          from={{ height: 0, opacity: 0 }}
-          animate={{ height: 150, opacity: 1 }}
-          transition={{ type: 'timing', duration: 300 }}
-        >
-          <TextInput
-            style={styles.input}
-            placeholder="Nome do Produto"
-            value={newProduct.name}
-            onChangeText={(text) => setNewProduct({ ...newProduct, name: text })}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Preço"
-            value={newProduct.price}
-            onChangeText={(text) => setNewProduct({ ...newProduct, price: text })}
-            keyboardType="numeric"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Estoque"
-            value={newProduct.stock}
-            onChangeText={(text) => setNewProduct({ ...newProduct, stock: text })}
-            keyboardType="numeric"
-          />
-          <TouchableOpacity style={styles.saveButton} onPress={addProduct}>
-            <Text style={styles.saveButtonText}>Salvar</Text>
-          </TouchableOpacity>
-        </MotiView>
-      )}
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      <Header navigation={navigation} />
 
       <FlatList
+        ListHeaderComponent={
+          <>
+            <Text style={styles.title}>Painel de Administração</Text>
+
+            <MotiView
+              style={styles.metrics}
+              from={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'timing', duration: 450 }}
+            >
+              <Text style={styles.metric}>Vendas Hoje: <Text style={styles.metricValue}>R$ 150.00</Text></Text>
+              <Text style={styles.metric}>Produtos Mais Vendidos: <Text style={styles.metricValue}>Caixas</Text></Text>
+              <Text style={styles.metric}>Pedidos Pendentes: <Text style={styles.metricValue}>5</Text></Text>
+            </MotiView>
+
+            <View style={styles.controlsRow}>
+              <TouchableOpacity style={styles.addButton} onPress={() => setShowAddForm(s => !s)}>
+                <Text style={styles.addButtonText}>{showAddForm ? 'Fechar' : 'Adicionar Produto'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.goToStore} onPress={() => navigation?.navigate?.('Products')}>
+                <Text style={styles.goToStoreText}>Ir para Loja</Text>
+              </TouchableOpacity>
+            </View>
+
+            {showAddForm && (
+              <MotiView
+                style={styles.addForm}
+                from={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 170 }}
+                transition={{ type: 'timing', duration: 300 }}
+              >
+                <TextInput
+                  style={styles.input}
+                  placeholder="Nome do Produto"
+                  value={newProduct.name}
+                  onChangeText={(text) => setNewProduct(n => ({ ...n, name: text }))}
+                />
+                <View style={styles.row}>
+                  <TextInput
+                    style={[styles.input, { flex: 1, marginRight: 8 }]}
+                    placeholder="Preço (ex: 12.90)"
+                    value={newProduct.price}
+                    keyboardType="numeric"
+                    onChangeText={(text) => setNewProduct(n => ({ ...n, price: text }))}
+                  />
+                  <TextInput
+                    style={[styles.input, { width: 90 }]}
+                    placeholder="Estoque"
+                    value={newProduct.stock}
+                    keyboardType="numeric"
+                    onChangeText={(text) => setNewProduct(n => ({ ...n, stock: text }))}
+                  />
+                </View>
+                <TouchableOpacity style={styles.saveButton} onPress={addProduct}>
+                  <Text style={styles.saveButtonText}>Salvar Produto</Text>
+                </TouchableOpacity>
+              </MotiView>
+            )}
+
+            <Text style={styles.sectionTitle}>Produtos</Text>
+          </>
+        }
         data={products}
         renderItem={renderProduct}
         keyExtractor={(item) => item.id.toString()}
-        style={styles.list}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
+        ListFooterComponent={
+          <>
+            <Text style={styles.sectionTitle}>Pedidos</Text>
+            <FlatList
+              data={orders}
+              renderItem={renderOrder}
+              keyExtractor={(i) => `o-${i.id}`}
+              style={{ marginHorizontal: 20, marginTop: 10 }}
+              nestedScrollEnabled
+            />
+            <Footer />
+          </>
+        }
       />
-
-      {/* Gerenciamento de Pedidos */}
-      <Text style={styles.sectionTitle}>Gerenciamento de Pedidos</Text>
-      <FlatList
-        data={orders}
-        renderItem={renderOrder}
-        keyExtractor={(item) => item.id.toString()}
-        style={styles.list}
-      />
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1, backgroundColor: '#FAFAFB' },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 12,
     backgroundColor: '#FFFFFF',
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#003366',
-    textAlign: 'center',
-    marginBottom: 20,
-    fontFamily: 'Roboto',
-  },
-  metrics: {
-    backgroundColor: '#E0E0E0',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
-  },
-  metric: {
-    fontSize: 16,
-    color: '#212121',
-    marginBottom: 5,
-    fontFamily: 'Open Sans',
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#003366',
-    marginTop: 20,
-    marginBottom: 10,
-    fontFamily: 'Roboto',
-  },
-  addButton: {
-    backgroundColor: '#4CAF50',
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  addForm: {
-    backgroundColor: '#E0E0E0',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
-    overflow: 'hidden',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#757575',
-    borderRadius: 5,
-    padding: 8,
-    marginBottom: 10,
-    backgroundColor: '#FFFFFF',
-    fontFamily: 'Open Sans',
-  },
-  saveButton: {
-    backgroundColor: '#003366',
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  list: {
-    maxHeight: 200,
-  },
-  productItem: {
-    backgroundColor: '#E0E0E0',
-    padding: 15,
-    marginBottom: 10,
-    borderRadius: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  productDetails: {
-    flex: 1,
-  },
-  productName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#212121',
-    fontFamily: 'Roboto',
-  },
-  productInfo: {
-    fontSize: 14,
-    color: '#757575',
-    fontFamily: 'Open Sans',
-  },
-  status: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  removeButton: {
-    backgroundColor: '#FF9800',
-    padding: 8,
-    borderRadius: 5,
-  },
-  removeButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  orderItem: {
-    backgroundColor: '#E0E0E0',
-    padding: 15,
-    marginBottom: 10,
-    borderRadius: 10,
-  },
-  orderDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  orderCustomer: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#212121',
-    fontFamily: 'Roboto',
-  },
-  orderInfo: {
-    fontSize: 14,
-    color: '#757575',
-    fontFamily: 'Open Sans',
-  },
-  orderStatus: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
+  headerTitle: { fontSize: 16, fontWeight: '700', color: '#003366' },
+  headerActions: { flexDirection: 'row', gap: 12 },
+  headerLink: { color: '#FF9800', marginLeft: 12 },
+  title: { fontSize: 22, fontWeight: '700', color: '#003366', textAlign: 'center', marginTop: 16, marginBottom: 12 },
+  metrics: { backgroundColor: '#FFFFFF', marginHorizontal: 20, padding: 14, borderRadius: 12, elevation: 2, marginBottom: 12 },
+  metric: { fontSize: 14, color: '#333', marginBottom: 6 },
+  metricValue: { fontWeight: '700', color: '#003366' },
+  controlsRow: { flexDirection: 'row', justifyContent: 'space-between', marginHorizontal: 20, marginBottom: 12 },
+  addButton: { backgroundColor: '#003366', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8 },
+  addButtonText: { color: '#fff', fontWeight: '700' },
+  goToStore: { backgroundColor: '#FF9800', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8 },
+  goToStoreText: { color: '#fff', fontWeight: '700' },
+  addForm: { backgroundColor: '#fff', marginHorizontal: 20, borderRadius: 10, padding: 12, marginBottom: 12, elevation: 1 },
+  input: { borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 8, padding: 10, backgroundColor: '#FFF', marginBottom: 8 },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  saveButton: { backgroundColor: '#4CAF50', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
+  saveButtonText: { color: '#fff', fontWeight: '700' },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#003366', marginHorizontal: 20, marginTop: 6, marginBottom: 8 },
+  productItem: { backgroundColor: '#FFFFFF', padding: 12, marginBottom: 10, borderRadius: 10, flexDirection: 'row', alignItems: 'center', elevation: 1 },
+  productDetails: { flex: 1 },
+  productName: { fontSize: 16, fontWeight: '700', color: '#222' },
+  productInfo: { fontSize: 13, color: '#666', marginTop: 6 },
+  status: { marginTop: 6, fontWeight: '700' },
+  productActions: { marginLeft: 12, alignItems: 'flex-end' },
+  editButton: { backgroundColor: '#003366', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, marginBottom: 6 },
+  editButtonText: { color: '#fff', fontWeight: '700' },
+  removeButton: { backgroundColor: '#FF3B30', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  removeButtonText: { color: '#fff', fontWeight: '700' },
+  orderItem: { backgroundColor: '#fff', padding: 12, marginBottom: 8, borderRadius: 10, flexDirection: 'row', alignItems: 'center', elevation: 1 },
+  orderCustomer: { fontWeight: '700' },
+  orderInfo: { color: '#666', marginTop: 6 },
+  orderStatus: { fontWeight: '700' },
+  footer: { padding: 16, alignItems: 'center', marginTop: 8 },
+  footerText: { color: '#999' },
 });
 
 export default AdminPanelScreen;
